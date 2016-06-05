@@ -3,7 +3,7 @@ A small utility for runners who ever experienced a bad GPS situation. Did you ev
 
 If you see your GPS didn't work well during a run, follow these instructions : This utility will only be useful if you've already made a similar run, on the same path. You'll need a .gpx file from this similar run (which will be referred as the 'reference') and the time it took you ('reference time'). You'll also need to know how much time it took you today, when your GPS didn't work well (referred as 'wanted time').
 
-Then, with all these informations, just start python3 directly from a terminal and type 'exec(open("Path-to-modify_gpx.py").read())' and fill the form that will be submitted to you through your terminal.
+Then, with all these informations, just start Python3 directly from a terminal and type 'exec(open("Path-to-modify_gpx.py").read())' and fill the form that will be submitted to you through your terminal.
 
 That's it, you now have a new file, which follow the same path than the reference one, but with a different time.
 
