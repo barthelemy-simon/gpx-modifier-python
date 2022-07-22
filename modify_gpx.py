@@ -27,12 +27,13 @@ def seconds_to_string(integer) :                #convert a number of seconds int
 #####THE PROGRAM ITSELF#####
 
 import os
+from lxml import etree
 path=input("path to folder : ")
 os.chdir(path)
 
 file=input("name of reference file : ")
-b=open(file,"r",encoding='utf8')
-n=open("-".join(["new",file]),"w",encoding='utf8')
+et=etree.parse(file)
+root=et.getroot()
 
 t=input("reference time (hh:mm:ss) = ")
 tref=string_to_seconds(t)
@@ -40,41 +41,38 @@ tref=string_to_seconds(t)
 t=input("time wanted (hh:mm:ss) = ")
 tw=string_to_seconds(t)
 
-base=b.readlines()                            #the 1st 3 lines don't change
-for i in range(3) :
- n.write(base[i])
+#iterate through all XML elements
+for elem in root.getiterator():
+ #skip comments and processing instructions,
+ #  because they do not have names
+ if not (
+  isinstance(elem, etree._Comment)
+  or isinstance(elem, etree._ProcessingInstruction)
+ ):
+  #remove a namespace URI in the element's name
+  elem.tag = etree.QName(elem).localname
 
+#remove unused namespace declarations
+etree.cleanup_namespaces(root)
+
+#changing metadata time
 dstart=input("departure date (aaaa-mm-jj) = ")
-dstart="".join([dstart,"T"])
 tstart=input("time of departure (hh:mm:ss) = ")
-n.write("".join(["  <time>",dstart,tstart,"Z</time>\n"]))  #to change the time of departure
+root.find("metadata/time").text=dstart+"T"+tstart+"Z"
 
-for i in range(4,10) :                        #then again the time of departure
- n.write(base[i])                             #  with the appropriated structure
-n.write("".join(["    <time>",dstart,tstart,"Z</time>\n"]))
-n.write(base[11])
+#changing time of first trkpt
+tprev=string_to_seconds(root.find("trk/trkseg/trkpt/time").text[11:-1:])
+root.find("trk/trkseg/trkpt").text=dstart+"T"+tstart+"Z"
 
+#changing other times
 tn=string_to_seconds(tstart)
-i=12                                          #we've written the previous lines already
-while base[i] != '  </trkseg>\n' :            #that means the file is nearly ended
- n.write(base[i])                             #the 1st 2 lines are always the same
- n.write(base[i+1])
- i+=2
- 
- t1=string_to_seconds(base[i][21:29:1])       #the interesting part is only between the 21st
- t2=string_to_seconds(base[i-4][21:29:1])     #  and 29th character
- diff=t1-t2
+for trkpt in root.findall("trk/trkseg/trkpt")[1::]:
+ tnext=string_to_seconds(trkpt.find("time").text[11:-1:])
+ diff=tnext-tprev
  diffpond=diff*(tw/tref)                  #so that is space between 2 points isn't linear
- tn=tn+diffpond                           #  it's proportional to the one made during the reference
- n.write("".join(["    <time>",dstart,seconds_to_string(tn),"Z</time>\n"]))
- n.write(base[i+1])                   #I hope you've not made your run between 2 days
- i+=2
+ tn=tn+diffpond
+ trkpt.find("time").text=dstart+"T"+seconds_to_string(tn)+"Z"
+ tprev=tnext
 
-for k in range(3) :
- n.write(base[i])
- i+=1
-
-n.close()
-b.close()
-
-quit()
+#saving
+et.write("new-"+file)
